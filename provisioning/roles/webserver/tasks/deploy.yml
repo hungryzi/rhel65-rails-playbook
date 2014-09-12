@@ -1,0 +1,16 @@
+- name: Create deployment user
+  sudo: yes
+  user: name=deploy comment="Application deployment user"
+
+- name: add key
+  sudo: yes
+  authorized_key: user=deploy key="{{ lookup('file', '~/.ssh/apn_deploy.pub') }}"
+
+- name: add to sudoers
+  sudo: yes
+  lineinfile: "dest=/etc/sudoers state=present regexp='^deploy' line='deploy  ALL=(ALL)   NOPASSWD: ALL' validate='visudo -cf %s'"
+
+- name: Create deployment directory
+  sudo: yes
+  file: path={{deploy_directory}} owner=deploy group=deploy state=directory
+

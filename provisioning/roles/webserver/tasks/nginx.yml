@@ -1,0 +1,55 @@
+- name: check if Passenger already exists
+  shell: "bash -lc 'gem list passenger'"
+  register: gem_list_passenger
+
+- name: install Passenger
+  shell: "bash -lc 'gem install passenger'"
+  when: gem_list_passenger.stdout.find('passenger') == -1
+
+- name: check if default nginx exists
+  stat: path=/etc/nginx
+  register: default_nginx
+
+- name: remove default nginx
+  sudo: yes
+  yum: name=nginx state=absent
+  when: default_nginx.stat.exists
+
+- name: remove default nginx folder
+  sudo: yes
+  file: path=/etc/nginx state=absent
+  when: default_nginx.stat.exists
+
+- name: install passenger-nginx
+  command: rvmsudo passenger-install-nginx-module --auto-download --auto --prefix=/opt/nginx --extra-configure-flags='--with-http_gzip_static_module --with-http_secure_link_module --with-http_realip_module --with-http_ssl_module' creates=/opt/nginx
+
+- name: create nginx script
+  sudo: yes
+  copy: src=nginx_script dest=/etc/rc.d/init.d/nginx mode=755 force=false
+
+- name: change nginx config
+  sudo: yes
+  template: src=nginx.conf.j2 dest=/opt/nginx/conf/nginx.conf mode=644
+
+
+
+# - name: Install nginx
+#   sudo: yes
+#   yum: name=nginx state=installed
+#
+# - name: Remove the default app
+#   sudo: yes
+#   command: rm -rf /etc/nginx/conf.d/default.conf
+#
+# - name: Remove the app symlink, if exists
+#   sudo: yes
+#   command: rm -rf /etc/nginx/conf.d/nzh-data.conf
+#
+# - name: Configure nginx for the app
+#   sudo: yes
+#   template: src=etc_nginx_sites-available.conf.j2 dest=/etc/nginx/conf.d/nzh-data.conf force=yes
+#
+- name: restart nginx
+  sudo: yes
+  action: service name=nginx state=restarted
+
