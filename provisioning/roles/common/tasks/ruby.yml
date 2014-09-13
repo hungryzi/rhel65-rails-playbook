@@ -1,0 +1,42 @@
+---
+- stat: path=/etc/profile.d/rvm.sh
+  register: rvm
+
+- name: install RVM
+  shell: "curl -sSL https://get.rvm.io | sudo bash -s stable"
+  when: not rvm.stat.exists
+
+- name: add deploy to rvm group
+  sudo: yes
+  user: name=deploy group=rvm append=yes
+
+- name: check if Ruby version is installed
+  shell: "bash -lc 'rvm list'"
+  register: ruby_versions
+  remote_user: deploy
+
+- name: install Ruby
+  shell: "bash -lc 'rvm install {{ruby_default}}'"
+  when: ruby_versions.stdout.find('{{ruby_default}}') == -1
+  remote_user: deploy
+
+- name: check if Ruby default version is set
+  shell: "bash -lc 'rvm list default'"
+  register: ruby_current_default
+  remote_user: deploy
+
+- name: set default Ruby
+  shell: "bash -lc 'rvm --default use {{ruby_default}}'"
+  when: ruby_current_default.stdout.find('{{ruby_default}}') == -1
+  remote_user: deploy
+
+- name: check if gemset exists
+  shell: "bash -lc 'rvm gemset list'"
+  register: ruby_gemsets
+  remote_user: deploy
+
+- name: create gemset
+  shell: "bash -lc 'rvm {{ruby_default}} do rvm gemset create {{rvm_gemset}}'"
+  when: ruby_gemsets.stdout.find('{{rvm_gemset}}') == -1
+  remote_user: deploy
+

@@ -1,0 +1,7 @@
+db_names:
+  - my_rails_app
+  - my_other_db
+db_user: rails
+db_password: password
+server_address: 10.11.12.0/24
+

@@ -1,46 +1,16 @@
 ---
+- hosts: all
+  user: kamal
+  roles:
+    - common
+
 - hosts: web
   user: kamal
-
-  pre_tasks:
-    - name: upgrade packages
-      yum: name=* state=latest
-      sudo: yes
-
-    - name: install development tools
-      yum: name="@Development tools" state=present
-      sudo: yes
-
-    - name: check if EPEL repo is installed
-      shell: yum repolist
-      register: yum_repos
-
-    - name: add EPEL repo
-      shell: rpm -Uvh --quiet http://dl.fedoraproject.org/pub/epel/6/x86_64/epel-release-6-8.noarch.rpm
-      sudo: yes
-      when: yum_repos.stdout.find('epel') == -1
-
-    - name: upgrade packages
-      yum: name=* state=latest
-      sudo: yes
-
-    - name: install packages
-      yum: name={{item}} state=present
-      sudo: yes
-      with_items:
-      - curl
-      - libcurl-devel
-      - sqlite-devel
-      - libyaml-devel
-      - nodejs
-      - vim
-      - tmux
-      - tree
-      - git
-      - ack
-      - wget
-      - postgresql-devel
-
   roles:
     - webserver
+
+- hosts: db
+  user: kamal
+  roles:
+    - dbserver
 

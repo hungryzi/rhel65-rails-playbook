@@ -1,0 +1,46 @@
+- name: check if default postgresql is installed
+  sudo: yes
+  shell: "yum list installed postgresql"
+  register: default_postgres
+  ignore_errors: true
+
+- name: remove default postgres
+  sudo: yes
+  yum: name=postgresql state=absent
+  when: default_postgres.stdout.find('postgresql') != -1
+
+- name: check if default postgresql-devel is installed
+  sudo: yes
+  shell: "yum list installed postgresql-devel"
+  register: default_postgres_dev
+  ignore_errors: true
+
+- name: remove default postgresql-devel
+  sudo: yes
+  yum: name=postgresql state=absent
+  when: default_postgres_dev.stdout.find('postgresql-devel') != -1
+
+- shell: cat {{repo}}
+  register: current_repo
+
+- name: configure YUM repo
+  sudo: yes
+  shell: printf "[main]\nexclude=postgresql*\n" >> {{repo}}
+  when: "'exclude=postgresql' not in '{{current_repo.stdout}}'"
+
+- name: install PGDG RPM file
+  sudo: yes
+  yum:  name=http://yum.postgresql.org/9.3/redhat/rhel-6-x86_64/pgdg-redhat93-9.3-1.noarch.rpm
+
+- name: Install postgresql
+  sudo: yes
+  yum:  name={{item}}
+  with_items:
+    - postgresql93
+    - postgresql93-server
+    - postgresql93-devel
+    - postgresql93-libs
+    - postgresql93-contrib
+    - postgis2_93
+    - python-psycopg2
+

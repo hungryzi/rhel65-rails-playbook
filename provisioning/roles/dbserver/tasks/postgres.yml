@@ -1,0 +1,31 @@
+- name: initialize
+  sudo: yes
+  shell: service postgresql-9.3 initdb
+
+- name: startup
+  sudo: yes
+  shell: chkconfig postgresql-9.3 on
+
+- name: change postgres config
+  sudo: yes
+  template: src=postgresql.conf.j2 dest=/var/lib/pgsql/9.3/data/postgresql.conf mode=600
+
+- name: change pg_hba config
+  sudo: yes
+  template: src=pg_hba.conf.j2 dest=/var/lib/pgsql/9.3/data/pg_hba.conf mode=600
+
+- name: restart postgres
+  sudo: yes
+  service: name=postgresql-9.3 state=restarted
+
+- name: ensure database exists
+  sudo: yes
+  sudo_user: postgres
+  postgresql_db: name={{item}}
+  with_items: db_names
+
+- name: ensure user exists
+  sudo: yes
+  sudo_user: postgres
+  postgresql_user: name={{db_user}} password={{db_password}} role_attr_flags=CREATEDB,SUPERUSER
+

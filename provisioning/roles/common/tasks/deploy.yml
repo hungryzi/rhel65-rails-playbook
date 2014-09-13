@@ -1,0 +1,24 @@
+- name: Create deployment group
+  sudo: yes
+  group: name=deploy state=present
+
+- name: Create deployment user
+  sudo: yes
+  user: name=deploy group=deploy state=present
+
+- name: add key
+  sudo: yes
+  authorized_key: user=deploy key="{{ lookup('file', deploy_key) }}"
+
+- name: add to sudoers
+  sudo: yes
+  lineinfile: "dest=/etc/sudoers state=present regexp='^deploy' line='deploy  ALL=(ALL)   NOPASSWD: ALL' validate='visudo -cf %s'"
+
+- name: create deployment directory
+  sudo: yes
+  file: path={{deploy_directory}} owner=deploy group=deploy state=directory
+
+- name: set logrotate
+  sudo: yes
+  template: src=logrotate.d.app.j2 dest=/etc/logrotate.d/app mode=644
+

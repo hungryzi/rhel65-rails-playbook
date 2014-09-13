@@ -1,0 +1,5 @@
+ruby_default: 2.1.2
+rvm_gemset: my_rails_app
+repo: /etc/yum/pluginconf.d/rhnplugin.conf
+deploy_directory: /var/www/my_rails_app
+deploy_key: ~/.ssh/deploy.pub

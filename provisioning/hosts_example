@@ -1,9 +1,5 @@
 [web]
 10.11.12.13
 
-[web:vars]
-ruby_default=2.1.2
-rvm_gemset=my_rails_app
-passenger_app_env=production
-deploy_directory=/var/www/my_rails_app
-
+[db]
+11.12.13.14

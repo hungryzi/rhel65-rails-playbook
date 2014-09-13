@@ -1,0 +1,4 @@
+- include: yum.yml tags=yum
+- include: deploy.yml tags=deploy
+- include: ruby.yml tags=ruby
+- include: postgres.yml tags=postgres

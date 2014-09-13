@@ -1,0 +1,40 @@
+- name: check if redis exists
+  stat: path=/usr/local/bin/redis-server
+  register: installed_redis
+
+- name: download Redis
+  get_url: dest=/home/deploy/redis-{{redis_version}}.tar.gz url=http://download.redis.io/releases/redis-{{redis_version}}.tar.gz
+  remote_user: deploy
+  when: not installed_redis.stat.exists
+
+- name: extract Redis
+  command: chdir=/home/deploy tar zxvf redis-{{redis_version}}.tar.gz
+  remote_user: deploy
+  when: not installed_redis.stat.exists
+
+- name: install Redis
+  command: chdir=/home/deploy/redis-{{redis_version}} make install
+  remote_user: deploy
+  sudo: yes
+
+- name: copy redis.conf
+  template: src=redis.conf.j2 dest=/etc/redis/redis.conf mode=644 owner=deploy group=deploy
+  remote_user: deploy
+  sudo: yes
+
+- name: copy redis_6379
+  template: src=redis_6379.j2 dest=/etc/init.d/redis_6379 mode=755 owner=deploy group=deploy
+  sudo: yes
+
+- name: install redis service
+  shell: chkconfig --add redis_6379
+  sudo: yes
+
+- name: install redis service
+  shell: chkconfig redis_6379 on
+  sudo: yes
+
+- name: restart Redis
+  service: name=redis_6379 state=restarted
+  sudo: yes
+
