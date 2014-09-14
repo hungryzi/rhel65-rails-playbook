@@ -2,5 +2,5 @@
 .DS_Store
 
 # Ignore configuration
-provisioning/hosts
+provisioning/hosts*
 provisioning/group_vars/*.yml

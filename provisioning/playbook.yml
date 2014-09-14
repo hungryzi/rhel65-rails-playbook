@@ -1,16 +1,17 @@
 ---
-- hosts: all
-  user: kamal
-  roles:
-    - common
-
 - hosts: web
   user: kamal
   roles:
+    - common
     - webserver
 
 - hosts: db
   user: kamal
   roles:
+    - common
     - dbserver
 
+- hosts: varnish
+  user: root
+  roles:
+    - varnishserver
