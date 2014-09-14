@@ -25,6 +25,10 @@
   template: src=default.vcl.j2 dest=/etc/varnish/default.vcl mode=644
   sudo: yes
 
+- name: add varnish
+  template: src=varnish.j2 dest=/etc/sysconfig/varnish mode=644
+  sudo: yes
+
 - name: restart varnish
   service: name=varnish state=restarted
   sudo: yes
