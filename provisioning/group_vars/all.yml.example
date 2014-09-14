@@ -3,3 +3,4 @@ rvm_gemset: my_rails_app
 repo: /etc/yum/pluginconf.d/rhnplugin.conf
 deploy_directory: /var/www/my_rails_app
 deploy_key: ~/.ssh/deploy.pub
+newrelic_license_key: 6531e723d1e53b98bbf

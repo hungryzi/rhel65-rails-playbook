@@ -1,0 +1,16 @@
+- name: install NewRelic RPM file
+  shell: rpm -Uvh http://download.newrelic.com/pub/newrelic/el5/i386/newrelic-repo-5-3.noarch.rpm
+  sudo: yes
+
+- name: install NewRelic
+  yum: name=newrelic-sysmond state=present
+  sudo: yes
+
+- name: config NewRelic
+  shell: nrsysmond-config --set license_key={{newrelic_license_key}}
+  sudo: yes
+
+- name: restart NewRelic
+  service: name=newrelic-sysmond state=restarted
+  sudo: yes
+
