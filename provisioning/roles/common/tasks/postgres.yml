@@ -44,3 +44,6 @@
     - postgis2_93
     - python-psycopg2
 
+- name: add PATH to pg_config
+  lineinfile: "dest='/home/deploy/.bashrc' state=present line='export PATH=$PATH:/usr/pgsql-9.3/bin'"
+  sudo: yes
