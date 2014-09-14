@@ -31,10 +31,6 @@
   sudo: yes
   template: src=nginx.conf.j2 dest=/opt/nginx/conf/nginx.conf mode=644
 
-- name: set logrotate
-  sudo: yes
-  file: src=/opt/nginx/logs dest=/var/log state=link
-
 - name: restart nginx
   sudo: yes
   action: service name=nginx state=restarted
