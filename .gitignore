@@ -4,3 +4,4 @@
 # Ignore configuration
 provisioning/hosts*
 provisioning/group_vars/*.yml
+provisioning/host_vars/*.yml

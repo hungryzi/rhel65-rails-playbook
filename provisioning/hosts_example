@@ -2,7 +2,8 @@
 10.11.12.13
 
 [db]
-10.12.13.14
+master_host
+slave_host
 
 [varnish]
 10.13.14.15

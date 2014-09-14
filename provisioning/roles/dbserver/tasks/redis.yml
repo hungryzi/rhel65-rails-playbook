@@ -17,6 +17,16 @@
   remote_user: deploy
   sudo: yes
 
+- name: make sure /etc/redis exists
+  file: name=/etc/redis state=directory
+  remote_user: deploy
+  sudo: yes
+
+- name: make sure /var/lib/redis/data exists
+  file: name=/var/lib/redis/data state=directory
+  remote_user: deploy
+  sudo: yes
+
 - name: copy redis.conf
   template: src=redis.conf.j2 dest=/etc/redis/redis.conf mode=644 owner=deploy group=deploy
   remote_user: deploy
@@ -24,6 +34,10 @@
 
 - name: copy redis_6379
   template: src=redis_6379.j2 dest=/etc/init.d/redis_6379 mode=755 owner=deploy group=deploy
+  sudo: yes
+
+- name: make sure /var/log/redis.log exists
+  file: name=/var/log/redis.log state=touch mode=644 owner=deploy group=deploy
   sudo: yes
 
 - name: install redis service

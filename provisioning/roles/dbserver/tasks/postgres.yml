@@ -1,31 +1,56 @@
 - name: initialize
-  sudo: yes
   shell: service postgresql-9.3 initdb
+  sudo: yes
 
 - name: startup
-  sudo: yes
   shell: chkconfig postgresql-9.3 on
+  sudo: yes
 
 - name: change postgres config
+  template: src={{db_role}}_postgresql.conf.j2 dest=/var/lib/pgsql/9.3/data/postgresql.conf mode=600
   sudo: yes
-  template: src=postgresql.conf.j2 dest=/var/lib/pgsql/9.3/data/postgresql.conf mode=600
 
 - name: change pg_hba config
+  template: src={{db_role}}_pg_hba.conf.j2 dest=/var/lib/pgsql/9.3/data/pg_hba.conf mode=600
   sudo: yes
-  template: src=pg_hba.conf.j2 dest=/var/lib/pgsql/9.3/data/pg_hba.conf mode=600
+
+- name: change slave recovery config
+  template: src={{db_role}}_recovery.conf.j2 dest=/var/lib/pgsql/9.3/data/recovery.conf mode=600 owner=postgres group=postgres
+  when: db_role == 'slave'
+  sudo: yes
 
 - name: restart postgres
-  sudo: yes
   service: name=postgresql-9.3 state=restarted
+  sudo: yes
 
 - name: ensure database exists
-  sudo: yes
   sudo_user: postgres
   postgresql_db: name={{item}}
   with_items: db_names
+  when: db_role == 'master'
+  sudo: yes
 
 - name: ensure user exists
-  sudo: yes
   sudo_user: postgres
   postgresql_user: name={{db_user}} password={{db_password}} role_attr_flags=CREATEDB,SUPERUSER
+  when: db_role == 'master'
+  sudo: yes
+
+- name: create replication user
+  sudo_user: postgres
+  postgresql_user: name={{db_replication_user}} password={{db_replication_password}} role_attr_flags=REPLICATION
+  when: db_role == 'master'
+  sudo: yes
+
+- name: add private key
+  copy: src=apn_postgres dest=/var/lib/pgsql/.ssh/id_rsa mode=600 force=true owner=postgres group=postgres
+  sudo: yes
+
+- name: add public key
+  copy: src=apn_postgres.pub dest=/var/lib/pgsql/.ssh/id_rsa.pub mode=644 force=true owner=postgres group=postgres
+  sudo: yes
+
+- name: add authorized_key
+  authorized_key: user=postgres key="{{ lookup('file', '/Users/hungryzi/.ssh/apn_postgres.pub') }}"
+  sudo: yes
 

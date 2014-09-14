@@ -4,4 +4,8 @@ db_names:
 db_user: rails
 db_password: password
 server_address: 10.11.12.0/24
-
+redis_version: 2.8.15
+db_replication_user: replicator
+db_replication_password: password
+slave_address: slave_host
+master_address: master_host
