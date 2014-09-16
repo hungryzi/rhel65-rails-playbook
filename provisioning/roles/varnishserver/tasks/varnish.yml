@@ -1,25 +1,25 @@
-- name: add rpm
-  shell: rpm --nosignature -i https://repo.varnish-cache.org/redhat/varnish-4.0.el6.rpm
-  ignore_errors: true
-  sudo: yes
-
-- name: check if default varnish-agent is installed
-  shell: "yum list installed varnish-agent"
-  register: default_varnish
-  ignore_errors: true
-  sudo: yes
-
-- name: remove default varnish
-  yum: name={{item}} state=absent
-  when: default_varnish.stdout.find('4.0.1') == -1
-  with_items:
-    - varnish-agent
-    - varnish-plus
-  sudo: yes
-
-- name: install varnish
-  yum: name=varnish state=present
-  sudo: yes
+# - name: add rpm
+#   shell: rpm --nosignature -i https://repo.varnish-cache.org/redhat/varnish-4.0.el6.rpm
+#   ignore_errors: true
+#   sudo: yes
+#
+# - name: check if default varnish-agent is installed
+#   shell: "yum list installed varnish-agent"
+#   register: default_varnish
+#   ignore_errors: true
+#   sudo: yes
+#
+# - name: remove default varnish
+#   yum: name={{item}} state=absent
+#   when: default_varnish.stdout.find('4.0.1') == -1
+#   with_items:
+#     - varnish-agent
+#     - varnish-plus
+#   sudo: yes
+#
+# - name: install varnish
+#   yum: name=varnish state=present
+#   sudo: yes
 
 - name: add configuration
   template: src=default.vcl.j2 dest=/etc/varnish/default.vcl mode=644
