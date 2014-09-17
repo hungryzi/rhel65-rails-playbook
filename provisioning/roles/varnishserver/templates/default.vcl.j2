@@ -1,11 +1,9 @@
-# This is a Varnish 4.x VCL file
-vcl 4.0;
-
-backend default {
-  .host = "10.230.5.12";
+{% for item in servers %}
+backend web{{loop.index}} {
+  .host = "{{item}}";
   .port = "80";
   .probe = {
-    .url = "/ping";
+    .url = "/";
     .timeout   = 1s;
     .interval  = 10s;
     .window    = 5;
@@ -15,22 +13,24 @@ backend default {
   .connect_timeout        = 5s;     # How long to wait for a backend connection?
   .between_bytes_timeout  = 2s;     # How long to wait between bytes received from our backend?
 }
-
-{% for item in servers %}
-backend web{{loop.index}} {
-  .host = "{{item}}";
-  .port = "80";
-}
 {% endfor %}
 
-# Below is an example redirector based on round-robin requests
-import directors;
-sub vcl_init {
-  new cluster1 = directors.round_robin();
+director cluster1 round-robin {
   {% for item in servers %}
-  cluster1.add_backend(web{{loop.index}});
+  {
+    .backend = web{{loop.index}};
+  }
   {% endfor %}
 }
+
+# Below is an example redirector based on round-robin requests
+# import directors;
+# sub vcl_init {
+#   new cluster1 = directors.round_robin();
+#   {% for item in servers %}
+#   cluster1.add_backend(web{{loop.index}});
+#   {% endfor %}
+# }
 
 # Below is an example redirector based on the client IP (sticky sessions)
 #sub vcl_init {
@@ -39,23 +39,24 @@ sub vcl_init {
 #    cluster2.add_backend(web2);    # Backend web2 defined above
 #}
 
-# acl purge {
-#   # For now, I'll only allow purges coming from localhost
-#   "127.0.0.1";
-#   "localhost";
-# }
+acl purge {
+  # For now, I'll only allow purges coming from localhost
+  "127.0.0.1";
+  "localhost";
+}
 
 # Handle the HTTP request received by the client
 sub vcl_recv {
   # Choose the round-robin backend
-  set req.backend_hint = cluster1.backend();
+  # set req.backend_hint = cluster1.backend(); # Varnish 4
+  set req.backend = cluster1;
 
   # Or chose the client-IP backend (sticky sessions)
   #set req.backend_hint = cluster2.backend();
 
   # shortcut for DFind requests
   if (req.url ~ "^/w00tw00t") {
-    return (synth(404, "Not Found"));
+    error 404 "Not Found"; # Varnish 4
   }
 
   if (req.restarts == 0) {
@@ -70,31 +71,31 @@ sub vcl_recv {
   # set req.http.Host = regsub(req.http.Host, ":[0-9]+", "");
 
   # Allow purging
-  # if (req.method == "PURGE") {
-  #   if (!client.ip ~ purge) {
-  #     # Not from an allowed IP? Then die with an error.
-  #     return (synth(405, "This IP is not allowed to send PURGE requests."));
-  #   }
-  #
-  #   # If you got this stage (and didn't error out above), purge the cached result
-  #   return (purge);
-  # }
+  if (req.request == "PURGE") {
+    if (!client.ip ~ purge) {
+      # Not from an allowed IP? Then die with an error.
+      error 405 "This IP is not allowed to send PURGE requests.";
+    }
+
+    # If you got this stage (and didn't error out above), purge the cached result
+    return (lookup);
+  }
 
   # Only deal with "normal" types
-  if (req.method != "GET" &&
-      req.method != "HEAD" &&
-      req.method != "PUT" &&
-      req.method != "POST" &&
-      req.method != "TRACE" &&
-      req.method != "OPTIONS" &&
-      req.method != "PATCH" &&
-      req.method != "DELETE") {
+  if (req.request != "GET" &&
+      req.request != "HEAD" &&
+      req.request != "PUT" &&
+      req.request != "POST" &&
+      req.request != "TRACE" &&
+      req.request != "OPTIONS" &&
+      req.request != "PATCH" &&
+      req.request != "DELETE") {
     /* Non-RFC2616 or CONNECT which is weird. */
     return (pipe);
   }
 
   # Only cache GET or HEAD requests. This makes sure the POST requests are always passed.
-  if (req.method != "GET" && req.method != "HEAD") {
+  if (req.request != "GET" && req.request != "HEAD") {
     return (pass);
   }
 
@@ -187,7 +188,8 @@ sub vcl_recv {
   # Before you blindly enable this, have a read here: http://mattiasgeniar.be/2012/11/28/stop-caching-static-files/
   if (req.url ~ "^[^?]*\.(bmp|bz2|css|doc|eot|flv|gif|gz|ico|jpeg|jpg|js|less|pdf|png|rtf|swf|txt|woff|xml)(\?.*)?$") {
     unset req.http.Cookie;
-    return (hash);
+    # return (hash); # Varnish 4
+    return (lookup);
   }
 
   # Send Surrogate-Capability headers to announce ESI support to backend
@@ -198,7 +200,8 @@ sub vcl_recv {
     return (pass);
   }
 
-  return (hash);
+  # return (hash); # Varnish 4
+  return (lookup);
 }
 
 sub vcl_pipe {
@@ -234,15 +237,25 @@ sub vcl_hash {
 }
 
 sub vcl_hit {
+  if (req.request == "PURGE") {
+    purge;
+    error 200 "Purged.";
+  }
+
   return (deliver);
 }
 
 sub vcl_miss {
+  if (req.request == "PURGE") {
+    purge;
+    error 200 "Purged.";
+  }
+
   return (fetch);
 }
 
 # Handle the HTTP request coming from our backend
-sub vcl_backend_response {
+sub vcl_fetch {
   # Remove Rails cookie
   unset beresp.http.Set-Cookie;
 
@@ -255,9 +268,9 @@ sub vcl_backend_response {
   # Enable cache for all static files
   # The same argument as the static caches from above: monitor your cache size, if you get data nuked out of it, consider giving up the static file cache.
   # Before you blindly enable this, have a read here: http://mattiasgeniar.be/2012/11/28/stop-caching-static-files/
-  if (bereq.url ~ "^[^?]*\.(bmp|bz2|css|doc|eot|flv|gif|gz|ico|jpeg|jpg|js|less|mp[34]|pdf|png|rar|rtf|swf|tar|tgz|txt|wav|woff|xml|zip)(\?.*)?$") {
-    unset beresp.http.set-cookie;
-  }
+  # if (bereq.url ~ "^[^?]*\.(bmp|bz2|css|doc|eot|flv|gif|gz|ico|jpeg|jpg|js|less|mp[34]|pdf|png|rar|rtf|swf|tar|tgz|txt|wav|woff|xml|zip)(\?.*)?$") {
+  #   unset beresp.http.set-cookie;
+  # }
 
   # Sometimes, a 301 or 302 redirect formed via Apache's mod_rewrite can mess with the HTTP port that is being passed along.
   # This often happens with simple rewrite rules in a scenario where Varnish runs on :80 and Apache on :8080 on the same box.
@@ -269,10 +282,10 @@ sub vcl_backend_response {
     set beresp.http.Location = regsub(beresp.http.Location, ":[0-9]+", "");
   }
 
-  # Set 2min cache if unset for static files
+  # Set 30min cache if unset for static files
   if (beresp.ttl <= 0s || beresp.http.Set-Cookie || beresp.http.Vary == "*") {
-    set beresp.ttl = 120s;
-    set beresp.uncacheable = true;
+    set beresp.ttl = 1800s;
+    # set beresp.uncacheable = true; # Varnish 4
     return (deliver);
   }
 
@@ -286,9 +299,9 @@ sub vcl_backend_response {
 # Last chance to modify headers that are sent to the client
 sub vcl_deliver {
   if (obj.hits > 0) {
-    set resp.http.X-Cache = "cached";
+    set resp.http.X-Cache = "HIT";
   } else {
-    set resp.http.x-Cache = "uncached";
+    set resp.http.x-Cache = "MISS";
   }
 
   # Remove some headers
@@ -303,23 +316,23 @@ sub vcl_deliver {
   return (deliver);
 }
 
-sub vcl_synth {
-  if (resp.status == 720) {
-    # We use this special error status 720 to force redirects with 301 (permanent) redirects
-    # To use this, call the following from anywhere in vcl_recv: error 720 "http://host/new.html"
-    set resp.status = 301;
-    set resp.http.Location = resp.reason;
-    return (deliver);
-  } elseif (resp.status == 721) {
-    # And we use error status 721 to force redirects with a 302 (temporary) redirect
-    # To use this, call the following from anywhere in vcl_recv: error 720 "http://host/new.html"
-    set resp.status = 302;
-    set resp.http.Location = resp.reason;
-    return (deliver);
-  }
-
-  return (deliver);
-}
+# sub vcl_synth {
+#   if (resp.status == 720) {
+#     # We use this special error status 720 to force redirects with 301 (permanent) redirects
+#     # To use this, call the following from anywhere in vcl_recv: error 720 "http://host/new.html"
+#     set resp.status = 301;
+#     set resp.http.Location = resp.reason;
+#     return (deliver);
+#   } elseif (resp.status == 721) {
+#     # And we use error status 721 to force redirects with a 302 (temporary) redirect
+#     # To use this, call the following from anywhere in vcl_recv: error 720 "http://host/new.html"
+#     set resp.status = 302;
+#     set resp.http.Location = resp.reason;
+#     return (deliver);
+#   }
+#
+#   return (deliver);
+# }
 
 sub vcl_init {
   return (ok);
