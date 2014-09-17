@@ -58,10 +58,19 @@ http {
     }
 
     location ~ ^/assets/ {
+      gzip_static on;
+
       root {{deploy_directory}}/current/public;
 
-      expires 1y;
       add_header Cache-Control public;
+      expires 1y;
+
+      gzip on;
+      gzip_vary on;
+      gzip_proxied any;
+      gzip_disable "MSIE [1-6]\.";
+      gzip_comp_level 6;
+      gzip_types application/x-javascript text/css text/html image/x-icon image/png image/jpeg image/gif;
 
       add_header ETag "";
       break;
