@@ -42,6 +42,10 @@
   when: db_role == 'master'
   sudo: yes
 
+- name: make sure /var/lib/pgsql/.ssh exists
+  file: name=/var/lib/pgsql/.ssh state=directory owner=postgres group=postgres
+  sudo: yes
+
 - name: add private key
   copy: src=apn_postgres dest=/var/lib/pgsql/.ssh/id_rsa mode=600 force=true owner=postgres group=postgres
   sudo: yes

@@ -1,39 +1,38 @@
 - name: check if default postgresql is installed
-  sudo: yes
   shell: "yum list installed postgresql"
   register: default_postgres
   ignore_errors: true
+  sudo: yes
 
 - name: remove default postgres
-  sudo: yes
   yum: name=postgresql state=absent
   when: default_postgres.stdout.find('postgresql') != -1
+  sudo: yes
 
 - name: check if default postgresql-devel is installed
-  sudo: yes
   shell: "yum list installed postgresql-devel"
   register: default_postgres_dev
   ignore_errors: true
+  sudo: yes
 
 - name: remove default postgresql-devel
-  sudo: yes
   yum: name=postgresql state=absent
   when: default_postgres_dev.stdout.find('postgresql-devel') != -1
+  sudo: yes
 
 - shell: cat {{repo}}
   register: current_repo
 
 - name: configure YUM repo
-  sudo: yes
   shell: printf "[main]\nexclude=postgresql*\n" >> {{repo}}
   when: "'exclude=postgresql' not in '{{current_repo.stdout}}'"
+  sudo: yes
 
 - name: install PGDG RPM file
-  sudo: yes
   yum:  name=http://yum.postgresql.org/9.3/redhat/rhel-6-x86_64/pgdg-redhat93-9.3-1.noarch.rpm
+  sudo: yes
 
 - name: Install postgresql
-  sudo: yes
   yum:  name={{item}}
   with_items:
     - postgresql93
@@ -43,6 +42,7 @@
     - postgresql93-contrib
     - postgis2_93
     - python-psycopg2
+  sudo: yes
 
 - name: add PATH to pg_config
   lineinfile: "dest='/home/deploy/.bashrc' state=present line='export PATH=$PATH:/usr/pgsql-9.3/bin'"
